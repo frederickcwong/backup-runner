@@ -194,7 +194,7 @@ jobs:
             tag=$(sanitizeTag $tag)
             is_release=$(isRelease $tag)
             latest=$([[ $is_release == 'true' ]] && echo 'true' || echo 'false')
-            build_image=$([[ '${SCHEDULE_EVENT_NEED_UPDATE}' == 'true' \
+            build_image=$([[ ${SCHEDULE_EVENT_NEED_UPDATE} == 'true' \
               && $is_release == 'true' ]] && echo 'true' || echo 'false')
 
           fi
