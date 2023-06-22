@@ -189,17 +189,14 @@ jobs:
           #   - "latest" (semver)
           else
 
-            sha='${SCHEDULE_EVENT_SHA}'
-            tag='${SCHEDULE_EVENT_TAG}'
+            sha=${SCHEDULE_EVENT_SHA}
+            tag=${SCHEDULE_EVENT_TAG}
             tag=$(sanitizeTag $tag)
             is_release=$(isRelease $tag)
             latest=$([[ $is_release == 'true' ]] && echo 'true' || echo 'false')
             build_image=$([[ '${SCHEDULE_EVENT_NEED_UPDATE}' == 'true' \
               && $is_release == 'true' ]] && echo 'true' || echo 'false')
 
-            echo "tag in schedule - ${tag}"
-            echo "env in schedule - ${SCHEDULE_EVENT_TAG}"
-            
           fi
 
           echo "repo $GITHUB_REPOSITORY"
