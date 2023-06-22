@@ -199,19 +199,16 @@ jobs:
 
           fi
 
-          echo "repo $GITHUB_REPOSITORY"
-          echo "event $GITHUB_EVENT_NAME"
-
           m_title="Build: ${GITHUB_REPOSITORY}@${tag}"
 
-          echo "title ${m_title}"
+          is_release=false
 
-          # if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
-          #   m_body=$(cat <<EOF
-          #   WARNING: Schedule event encountered a non-semver tag!
-          #   EOF
-          #   )
-          # fi
+          if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
+            m_body=$(cat <<EOF
+            WARNING: Schedule event encountered a non-semver tag!
+            EOF
+            )
+          fi
 
           m_body=$(cat <<EOF
           event-type:    ${GITHUB_EVENT_NAME}
