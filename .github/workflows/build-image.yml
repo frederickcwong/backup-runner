@@ -190,8 +190,7 @@ jobs:
           else
 
             sha=${SCHEDULE_EVENT_SHA}
-            tag=${SCHEDULE_EVENT_TAG}
-            tag=$(sanitizeTag $tag)
+            tag=$(sanitizeTag ${SCHEDULE_EVENT_TAG})
             is_release=$(isRelease $tag)
             latest=$([[ $is_release == 'true' ]] && echo 'true' || echo 'false')
             build_image=$([[ ${SCHEDULE_EVENT_NEED_UPDATE} == 'true' \
