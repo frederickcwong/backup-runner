@@ -1,0 +1,246 @@
+# Automate building of the docker image
+# image is built when:
+#   - a tag is pushed to github. it will use the tag's commit id to perform a build
+#   - the workflow is manually triggered. it will found the latest tag by traversing the commit
+#     id (or branch name) provided by the trigger. it will use the found tag to perform a build
+#   - run by github scheduler. it will always look for the latest tag in the release (main)
+#     branch and perform a build. it will only perform a build if:
+#     - the base image is outdated, and
+#     - the latest tag found in the release branch is in semver format
+#
+# IMPORTANT - do not use quote for tag/branch/repo names. it will break the (bash and yaml) code.
+# just stick to valid docker image tag (a-z A-Z 0-9 - . _) and backslash /.
+# although we can get around the special characters issue in shell script,
+# it wont work across jobs because in order to reference output from another job (like from a reusable
+# workflow), it must be done via "needs.<job-id>" or "needs.<step-id>" in yaml.
+# These are not variables in the shell. They are replaced with the actual text in the shell script
+# before the it is executed. The quotes, semi-colon, etc will be exposed as command line arguments
+# and will cause problems. Image "${{whatever}}" is replaced with "this`and`that". The back-tick
+# `and` will be executed as shell command and failed.
+
+# xxx - need to test if shoutrrr url is available, otherwise skip the step
+name: Build Docker Image
+on:
+  push:
+    tags:
+      - "**"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch name or commit hash (branch selection above is ignored)
+        required: true
+        type: string
+        default: main
+      latest:
+        description: Update "latest" tag?
+        required: true
+        type: boolean
+        default: false
+  # 10am UTC is 2/3am PT
+  schedule:
+    - cron: "0 10 * * *"
+
+jobs:
+  # determine if the base image is outdated
+  check-base-image:
+    runs-on: ubuntu-latest
+    outputs:
+      need-update: ${{steps.check.outputs.needs-updating}}
+    steps:
+      - id: check
+        uses: lucacome/docker-image-update-checker@v1
+        with:
+          base-image: library/ubuntu:latest
+          image: frederickwong/backup-runner:latest
+          platforms: linux/amd64
+
+  # get the sha and tag from github context (push tag action)
+  get-push-params:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{steps.get-params.outputs.sha}}
+      tag: ${{steps.get-params.outputs.tag}}
+    steps:
+      - id: get-params
+        name: Get Push Tag Params
+        shell: bash
+        run: |
+          echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+  # get the sha and tag from repo (workflow dispatch action)
+  get-dispatch-params:
+    uses: frederickcwong/.github/workflows/repo/get-latest-tag.yml@main
+    with:
+      ref: "${{inputs.ref}}"
+
+  # get the sha and tag from repo using main branch (schedule run)
+  # "main" is the release branch
+  get-schedule-params:
+    uses: frederickcwong/.github/workflows/repo/get-latest-tag.yml@main
+    with:
+      ref: "main"
+
+  # IMPORTANT NOTE
+  #
+  # there is an issue with the "needs" logic
+  # "needs" is a logical AND operation, meaning it needs all jobs listed
+  # if any of them failed or skipped, this job will not run.
+  # ideally, we want "get-dispatch-params" runs only when it is a dispatch
+  # event, etc. (this can be done by adding "if" condition in their jobs above)
+  # however, adding "if" condition to the jobs will "skip" the jobs causing this
+  # "get-params" job skipped.
+  # There is another solution to this limitation as described in the link below
+  # but it sounds like more tests/work/complications.
+  # https://stackoverflow.com/questions/66343052/github-actions-or-operator-for-needs-clause
+  # Hence my short-term solution is to let all of them runs, and use conditional statements
+  # inside each job to determine the job's outputs (default random values vs
+  # actual values).
+  get-params:
+    runs-on: ubuntu-latest
+    needs:
+      [
+        get-push-params,
+        get-dispatch-params,
+        get-schedule-params,
+        check-base-image,
+      ]
+    outputs:
+      sha: ${{steps.get-params.outputs.sha}}
+      tag: ${{steps.get-params.outputs.tag}}
+      is-release: ${{steps.get-params.outputs.is-release}}
+      latest: ${{steps.get-params.outputs.latest}}
+      build-image: ${{steps.get-params.outputs.build-image}}
+    steps:
+      - id: get-params
+        shell: bash
+        run: |
+          # shell script to generate build parameters
+
+          # determine if the git tag is a release tag
+          function isRelease() {
+            [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && echo 'true' || echo 'false'
+          }
+
+          # sanitize git tag to satisfy docker requirements
+          function sanitizeTag() {
+            # replace empty tag with 'no-tag'
+            # insert '_' to tag that starts with '-'
+            # insert '_' to tag that starts with '.'
+            # replace all non-valid characters with '-'
+            # and limit number of characters to 128
+            result=$(echo $1 | sed         \
+              -e 's/^$/no-tag/'            \
+              -e 's/^\(\-\)/_\1/'          \
+              -e 's/^\(\.\)/_\1/'          \
+              -e 's/[^a-zA-Z0-9\-_\.]/-/g' \
+            | cut -c 1-128)
+            echo $result
+          }
+
+          # push tag
+          #
+          # assume tag push event is always a release event if the tag is in
+          # semver format, which will also tag the image with latest tag
+          #
+          # docker image tags:
+          #   - "<tag>-YYYY-MM-DD" (semver format)
+          #   - "latest" (semver format)
+          #   - "<tag>" (not semver format)
+          if [[ ${GITHUB_EVENT_NAME}  == 'push' ]]; then
+
+            sha='${{needs.get-push-params.outputs.sha}}'
+            tag='${{needs.get-push-params.outputs.tag}}'
+            tag=$(sanitizeTag $tag)
+            is_release=$(isRelease $tag)
+            latest=${is_release}
+            build_image='true'
+
+          # workflow dispatch
+          #
+          # if user did not request "latest", the image will not be tagged with "latest" tag
+          # if user requested "latest", the image will be tagged only if the tag is in semver format
+          #
+          # docker image tags:
+          #   - "major.minor.patch-YYYY-MM-DD" (semver)
+          #   - "latest" (semver && latest requested)
+          #   - "tag" (not semver)
+          elif [[ ${GITHUB_EVENT_NAME} == 'workflow_dispatch' ]]; then
+
+            sha='${{needs.get-dispatch-params.outputs.sha}}'
+            tag='${{needs.get-dispatch-params.outputs.tag}}'
+            tag=$(sanitizeTag $tag)
+            is_release=$(isRelease $tag)
+            latest=$([[ '${{inputs.latest}}' == 'true' && ($is_release == 'true') ]] && echo 'true' || echo 'false')
+            build_image="true"
+
+          # schedule
+          #
+          # its purpose is to update the base image periodically and it is intended for the "latest" release
+          # therefore, if the latest tag in the mainline is a semver, build and update the latest tag
+          # otherwise, it should skip the latest tag
+          #
+          # docker image tags:
+          #   - "major.minor.patch-YYYY-MM-DD" (semver)
+          #   - "latest" (semver)
+          else
+
+            sha='${{needs.get-schedule-params.outputs.sha}}'
+            tag='${{needs.get-schedule-params.outputs.tag}}'
+            tag=$(sanitizeTag $tag)
+            is_release=$(isRelease $tag)
+            latest=$([[ $is_release == 'true' ]] && echo 'true' || echo 'false')
+            build_image=$([[ '${{needs.check-base-image.outputs.need-update}}' == 'true' \
+              && $is_release == 'true' ]] && echo 'true' || echo 'false')
+          fi
+
+          m_title="Build: ${GITHUB_REPOSITORY}@${tag}"
+
+          m_body=$(cat <<EOF
+          event-type:    ${GITHUB_EVENT_NAME}
+          build-image:   ${build_image}
+          tag:           ${tag}
+          sha:           ${sha}
+          is-release:    ${is_release}
+          need-latest:   ${latest}
+          EOF
+          )
+          if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
+            m_body="${m_body}\n - WARNING: Schedule event encountered a non-semver tag!"
+          fi
+
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "is-release=${is_release}" >> "$GITHUB_OUTPUT"
+          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
+          echo "build-image=${build_image}" >> "$GITHUB_OUTPUT"
+          echo "shoutrrr-title=$m_title" >> "$GITHUB_OUTPUT"
+
+          # output does not accept multi-line string, use env instead
+          echo "shoutrrr_body<<EOF" >> "$GITHUB_ENV"
+          echo "$m_body" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - uses: containrrr/shoutrrr-action@v1
+        with:
+          url: ${{secrets.SHOUTRRR_URL}}
+          title: ${{steps.get-params.outputs.shoutrrr-title}}
+          message: ${{env.shoutrrr_body}}
+
+  # build the image with tags based on tag is in semver format or not
+  build:
+    needs: [get-params]
+    if: ${{needs.get-params.outputs.build-image == 'true'}}
+    uses: frederickcwong/.github/workflows/docker/build-and-push.yml@main
+    secrets:
+      username: ${{secrets.DOCKER_USERNAME}}
+      password: ${{secrets.DOCKER_PASSWORD}}
+    with:
+      ref: ${{needs.get-params.outputs.sha}}
+      org: frederickwong
+      image: backup-runner
+      platforms: linux/amd64
+      base-tag: ${{needs.get-params.outputs.tag}}
+      need-latest: ${{needs.get-params.outputs.latest == 'true'}}
+      need-build-date: ${{needs.get-params.outputs.is-release == 'true'}}
+      build-date-tz: America/Los_Angeles
