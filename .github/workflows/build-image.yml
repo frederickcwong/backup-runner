@@ -12,8 +12,11 @@
 # names. it might break the bash code. The workaround (but not bullet proof) is to put all
 # gh action contexts (secrets, github, job and step outputs, etc) into environment variable at
 # the beginning of a job / step. This workaround avoid the directly subsititution of text to the
-# shell scripts before it is executed. Using ${{github.ref_name}} directly in shell script if
-# there are quotes in the ref_name (tag).
+# shell scripts before it is executed. If there are quote characters in ${{github.ref_name}},
+# the quotes will cause the shell script to break. e.g. if ${{github.ref_name}} is 'abc"def' with
+# a single double-quote in the text, the reference "${{github.ref_name}}" will be injected with
+# the text abc"def and become "abc"def". The shell will interpret "def" as a command and error out.
+
 name: Build Docker Image
 on:
   push:
