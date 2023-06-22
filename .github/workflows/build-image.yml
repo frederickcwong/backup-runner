@@ -190,7 +190,7 @@ jobs:
           else
 
             sha=${SCHEDULE_EVENT_SHA}
-            tag=$(sanitizeTag ${SCHEDULE_EVENT_TAG})
+            tag=$(sanitizeTag "${SCHEDULE_EVENT_TAG}")
             is_release=$(isRelease $tag)
             latest=$([[ $is_release == 'true' ]] && echo 'true' || echo 'false')
             build_image=$([[ ${SCHEDULE_EVENT_NEED_UPDATE} == 'true' \
@@ -203,9 +203,10 @@ jobs:
           is_release=false
 
           if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
+            # no space in front of EOF, otherwise it will not find EOF
             m_body=$(cat <<EOF
-            WARNING: Schedule event encountered a non-semver tag!
-            EOF
+          WARNING: Schedule event encountered a non-semver tag!
+          EOF
             )
           fi
 
