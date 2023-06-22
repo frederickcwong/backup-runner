@@ -33,8 +33,7 @@ on:
         default: false
   # 10am UTC is 2/3am PT
   schedule:
-    - cron: "0/5 * * * *"
-    # - cron: "0 10 * * *"
+    - cron: "0 10 * * *"
 
 jobs:
   # determine if the base image is outdated
@@ -197,8 +196,6 @@ jobs:
           fi
 
           m_title="Build: ${GITHUB_REPOSITORY}@${tag}"
-
-          is_release=false
 
           if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
             # no space in front of EOF, otherwise it will not find EOF
