@@ -202,11 +202,14 @@ jobs:
 
           if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
             # no space in front of EOF, otherwise it will not find EOF
+            echo "in if-else"
             m_body=$(cat <<EOF
           WARNING: Schedule event encountered a non-semver tag!
           EOF
             )
           fi
+
+          echo "m_body $m_body"
 
           m_body=$(cat <<EOF
           event-type:    ${GITHUB_EVENT_NAME}
