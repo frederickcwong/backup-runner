@@ -154,8 +154,7 @@ jobs:
           if [[ ${GITHUB_EVENT_NAME}  == 'push' ]]; then
 
             sha=${PUSH_EVENT_SHA}
-            tag=${PUSH_EVENT_TAG}
-            tag=$(sanitizeTag $tag)
+            tag=$(sanitizeTag "${PUSH_EVENT_TAG}")
             is_release=$(isRelease $tag)
             latest=${is_release}
             build_image='true'
@@ -172,10 +171,9 @@ jobs:
           elif [[ ${GITHUB_EVENT_NAME} == 'workflow_dispatch' ]]; then
 
             sha=${DISPATCH_EVENT_SHA}
-            tag=${DISPATCH_EVENT_TAG}
-            tag=$(sanitizeTag $tag)
+            tag=$(sanitizeTag "${DISPATCH_EVENT_TAG}")
             is_release=$(isRelease $tag)
-            latest=$([[ '${DISPATCH_EVENT_LATEST}' == 'true' && ($is_release == 'true') ]] && echo 'true' || echo 'false')
+            latest=$([[ ${DISPATCH_EVENT_LATEST} == 'true' && ($is_release == 'true') ]] && echo 'true' || echo 'false')
             build_image="true"
 
           # schedule
