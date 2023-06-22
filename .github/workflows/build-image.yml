@@ -204,6 +204,8 @@ jobs:
 
           m_title="Build: ${GITHUB_REPOSITORY}@${tag}"
 
+          echo "title ${m_title}"
+
           # if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
           #   m_body=$(cat <<EOF
           #   WARNING: Schedule event encountered a non-semver tag!
