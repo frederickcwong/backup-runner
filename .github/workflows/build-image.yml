@@ -33,7 +33,8 @@ on:
         default: false
   # 10am UTC is 2/3am PT
   schedule:
-    - cron: "0 10 * * *"
+    - cron: "0/5 * * * *"
+    # - cron: "0 10 * * *"
 
 jobs:
   # determine if the base image is outdated
@@ -198,7 +199,17 @@ jobs:
 
           fi
 
+          echo "repo $GITHUB_REPOSITORY"
+          echo "event $GITHUB_EVENT_NAME"
+
           m_title="Build: ${GITHUB_REPOSITORY}@${tag}"
+
+          if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
+            m_body=$(cat <<EOF
+            WARNING: Schedule event encountered a non-semver tag!
+            EOF
+            )
+          fi
 
           m_body=$(cat <<EOF
           event-type:    ${GITHUB_EVENT_NAME}
@@ -209,9 +220,6 @@ jobs:
           need-latest:   ${latest}
           EOF
           )
-          if [[ ${GITHUB_EVENT_NAME} == 'schedule' && ${is_release} == 'false' ]]; then
-            m_body="${m_body}\n - WARNING: Schedule event encountered a non-semver tag!"
-          fi
 
           echo "sha=${sha}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
