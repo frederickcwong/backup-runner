@@ -1,11 +1,11 @@
 FROM ubuntu:latest
 
 ARG VERSION=default
-ENV VERSION=${VERSION}
-ENV CRON_SCHEDULE="0 2 * * *"
-ENV COMPOSE_FILE="docker-compose.yml"
-ENV COMPOSE_PROJECT_NAME="home-automation"
-ENV DOCKER_SERVICES=
+ENV VERSION=${VERSION} \
+    CRON_SCHEDULE="0 2 * * *" \
+    COMPOSE_FILE="docker-compose.yml" \
+    COMPOSE_PROJECT_NAME="home-automation" \
+    DOCKER_SERVICES=
 
 # setup for docker install
 RUN apt-get update && apt-get upgrade -y

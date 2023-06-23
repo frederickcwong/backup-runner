@@ -258,6 +258,8 @@ jobs:
       org: frederickwong
       image: backup-runner
       platforms: linux/amd64
+      build-args: |
+        VERSION=${{needs.get-params.outputs.tag}}
       base-tag: ${{needs.get-params.outputs.tag}}
       need-latest: ${{needs.get-params.outputs.latest == 'true'}}
       need-build-date: ${{needs.get-params.outputs.is-release == 'true'}}
