@@ -1,3 +1,5 @@
+FROM containrrr/shoutrrr:latest AS shoutrrr
+
 FROM ubuntu:latest
 
 ARG VERSION=default
@@ -26,6 +28,9 @@ RUN \
 
 # copy init and backup script
 COPY --chmod=744 ["init.sh", "run.sh", "/backup/"]
+
+# copy shoutrrr binary
+COPY --from=shoutrrr --chmod=744 /shoutrrr /backup/
 
 # setup crontab using init.sh, then execute CMD from init.sh
 # note: because CMD will be appended to entrypoint as arguments
