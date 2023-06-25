@@ -7,7 +7,8 @@ ENV VERSION=${VERSION} \
     CRON_SCHEDULE="0 2 * * *" \
     COMPOSE_FILE="docker-compose.yml" \
     COMPOSE_PROJECT_NAME="home-automation" \
-    DOCKER_SERVICES=
+    DOCKER_SERVICES= \
+    WARNING_THRESHOLD_MB=2000
 
 RUN \
     # setup for docker repo
