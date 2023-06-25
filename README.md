@@ -19,6 +19,8 @@ services:
       - COMPOSE_FILE=<docker compose filename>
       - DOCKER_SERVICES=<list of services to be paused before backup process>
       - CRON_SCHEDULE=<cron schedule>
+      - SHOUTRRR_URL=<shoutrrr url>
+      - WARNING_THRESHOLD_MB=<storage space warning threshold in mb>
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock
@@ -51,6 +53,14 @@ services:
 
 - **CRON_SCHEDULE** - standard 5-field cron schedule expression. Use [this site](https://crontab.guru/) to
   help setting the desire schedule (\*default: 0 2 \* \* \*\*, at 2am daily).
+
+- **SHOURTRRR_URL** - the shoutrrr url for remote notifications. Use [this documentation](https://containrrr.dev/shoutrrr) to
+  configure this url. No notification will be sent if this url is not set. Note: store this
+  url in secrets instead of the docker compose file.
+
+- **WARNING_THRESHOLD_MB** - the threshold in MB for the warning message. The warning message
+  will be included in the notification if the space available in `/backup/media` is
+  less than the threshold. It is default to `WARNING_THRESHOLD_MB=2000` (i.e. 2000MB).
 
 ## Volume Mappings
 
