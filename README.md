@@ -31,6 +31,10 @@ services:
 
 [Docker Hub Image](https://hub.docker.com/repository/docker/frederickwong/backup-runner/general)
 
+**Note**: Github Actions will disable the scheduler after 60 days of repo inactivities. It can be
+re-enabled manually (Actions tab, select the workflow and click "enable"), or using the REST api
+(another scheduler to run a script hitting the REST api).
+
 ## Environment Variables
 
 - **COMPOSE_FILE** - the name of the docker compose file in the docker compose project directory
