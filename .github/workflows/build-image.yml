@@ -22,6 +22,8 @@ on:
   push:
     tags:
       - "**"
+  repository_dispatch:
+    types: [build]
   workflow_dispatch:
     inputs:
       ref:
