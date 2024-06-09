@@ -37,8 +37,8 @@ on:
         type: boolean
         default: false
   # 10am UTC is 2/3am PT
-  schedule:
-    - cron: "0 10 * * *"
+  #schedule:
+  #  - cron: "0 10 * * *"
 
 jobs:
   # determine if the base image is outdated
