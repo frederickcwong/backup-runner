@@ -70,7 +70,7 @@ jobs:
 
   # get the sha and tag from repo (workflow dispatch action)
   get-dispatch-params:
-    uses: frederickcwong/.github/.github/workflows/repo-get-latest-tag.yml@main
+    uses: frederickcwong/gh-workflows/.github/workflows/repo-get-latest-tag.yml@main
     with:
       ref: "${{inputs.ref}}"
 
@@ -251,7 +251,7 @@ jobs:
   build:
     needs: [get-params]
     if: ${{needs.get-params.outputs.build-image == 'true'}}
-    uses: frederickcwong/.github/.github/workflows/docker-build-and-push.yml@main
+    uses: frederickcwong/gh-workflows/.github/workflows/docker-build-and-push.yml@main
     secrets:
       username: ${{secrets.DOCKER_USERNAME}}
       password: ${{secrets.DOCKER_PASSWORD}}
