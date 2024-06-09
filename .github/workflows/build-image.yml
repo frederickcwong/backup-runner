@@ -77,7 +77,7 @@ jobs:
   # get the sha and tag from repo using main branch (schedule run)
   # "main" is the release branch
   get-schedule-params:
-    uses: frederickcwong/.github/.github/workflows/repo-get-latest-tag.yml@main
+    uses: frederickcwong/gh-workflows/actions/repo-get-latest-tag.yml@main
     with:
       ref: "main"
 
